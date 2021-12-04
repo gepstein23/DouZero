@@ -61,7 +61,6 @@ class RLCardAgent(object):
             else:
                 the_type = CARD_TYPE[0][last_move][0][0]
                 # this is a tuple of type (pair, straight etc) and its rank of that type
-                # print('Card Type Object: %s' % (CARD_TYPE[0][last_move][0]))
                 chosen_action = ''
                 rank = 1000
 
@@ -82,7 +81,6 @@ class RLCardAgent(object):
                     action = [char for char in chosen_action]
                     for i, c in enumerate(action):
                         action[i] = RealCard2EnvCard[c]
-                    # print('action:', action)
 
                 # else pass
                 elif last_pid != 'landlord' and self.position != 'landlord':
@@ -99,7 +97,7 @@ class RLCardAgent(object):
 
         return action
 
-    # Made combine cards a method in class because it is basically a heuristic for definining what 
+    # Made combine cards a method in class because it is basically a heuristic for definining what
     # the players optimal hand is. We have defined this optimal hand differently in V2.
     def combine_cards(self, hand):
         '''Get optimal combinations of cards in hand
@@ -157,11 +155,14 @@ class RLCardAgent(object):
                 index += 1
         if index == (len(hand) - 1):
             comb['solo'].append(hand[index])
+
         return comb
 
 # Improvements over first agent:
 #   1. Prioritze hard to play combinations ie long chains of singles and chains of pairs and triples.
 #   2. Priorizes picking pair chains over solo chains if it results in removing more cards from the hand.
+
+
 class RLCardAgentV2(RLCardAgent):
     def __init__(self, position):
         self.name = 'RLCardV2'
@@ -215,7 +216,7 @@ class RLCardAgentV2(RLCardAgent):
                         elif 'trio_chain' in the_type:
                             action = getActionArr(ac)
                             return action
-                
+
                 if len(chain_action[0]) > 0:
                     return chain_action[0]
 
@@ -250,7 +251,6 @@ class RLCardAgentV2(RLCardAgent):
                     action = [char for char in chosen_action]
                     for i, c in enumerate(action):
                         action[i] = RealCard2EnvCard[c]
-                    # print('action:', action)
 
                 # else pass
                 elif last_pid != 'landlord' and self.position != 'landlord':
@@ -260,8 +260,8 @@ class RLCardAgentV2(RLCardAgent):
                 action = random.choice(infoset.legal_actions)
         except:
             action = random.choice(infoset.legal_actions)
-            # import traceback
-            # traceback.print_exc()
+            import traceback
+            traceback.print_exc()
 
         assert action in infoset.legal_actions
 
@@ -275,11 +275,11 @@ class RLCardAgentV2(RLCardAgent):
 
         if sum(pair_handlist) < sum(solo_handlist):
             return (pair_chains, pair_handlist)
-        
+
         # Return original handlist if there are no good pair chains to pick
         return ([], hand_list)
-    
-    # Difference from V1: Priorizes picking pair chains over solo chains if it 
+
+    # Difference from V1: Priorizes picking pair chains over solo chains if it
     # results in removing more cards from the hand.
     def combine_cards(self, hand):
         '''Get optimal combinations of cards in hand
@@ -316,7 +316,7 @@ class RLCardAgentV2(RLCardAgent):
                 only_trio_chain.append(trio)
         comb['trio'] = only_trio
         comb['trio_chain'] = only_trio_chain
-    
+
         hand_list = card_str2list(hand)
 
         # The following two combos are the change from V1.
@@ -342,19 +342,48 @@ class RLCardAgentV2(RLCardAgent):
                 index += 1
         if index == (len(hand) - 1):
             comb['solo'].append(hand[index])
+
+        # 7. Add lowest solo and pairs to trios
+        solosAndPairs = comb['solo'] + comb['pair']
+        # sort by rank
+        solosAndPairs.sort(key=lambda acs: int(CARD_TYPE[0][acs][0][1]), reverse=True)
+
+        # reverse both lists so we can pop the lowest rank off the back of the list
+        comb['pair'].reverse()
+        comb['solo'].reverse()
+
+        # add the lowest kickers to each each trio
+        for i in range(len(comb['trio'])):
+            if len(solosAndPairs) > 0:
+                el = solosAndPairs.pop()
+
+                # remove the kicker from the solo / pair list
+                if len(el) == 2:
+                    comb['pair'].pop()
+                else: 
+                    comb['solo'].pop()
+
+                # sort the trio so that the lower rank cards come first
+                new_acs = comb['trio'][i] + el
+                new_ac = action_str2action_arr(new_acs)
+                new_ac.sort()
+                comb['trio'][i] = action_arr2action_str(new_ac)
+            
+        # put the lists back in their normal order
+        comb['pair'].reverse()
+        comb['solo'].reverse()
         return comb
 
 # Helper for getting the action arr
 # param ac: string of cards ex. 789TJ
 # returns result arr which is arr of card indexs ex. [7, 8, 9, 10, 11]
 def getActionArr(ac):
-    print(ac)
     chosen_action = ac
     result = [char for char in chosen_action]
     for i, c in enumerate(result):
         result[i] = RealCard2EnvCard[c]
-    print(result)
     return result
+
 
 def card_str2list(hand):
     hand_list = [0 for _ in range(15)]
@@ -370,15 +399,26 @@ def list2card_str(hand_list):
         card_str += cards[index] * count
     return card_str
 
+
+def action_arr2action_str(ac):
+    _ac = ac.copy()
+    for i, c in enumerate(_ac):
+        _ac[i] = EnvCard2RealCard[c]
+    return ''.join(_ac)
+
+def action_str2action_arr(ac):
+    _ac = []
+    for c in ac:
+        _ac.append(RealCard2EnvCard[c])
+    return _ac
+
+
 def pick_chain(hand_list, count):
-    # print('handlist: %s' % hand_list)
     chains = []
     str_card = [card for card in INDEX]
     hand_list = [str(card) for card in hand_list]
     hand = ''.join(hand_list[:12])
     chain_list = hand.split('0')
-    # print('strcard: %s' % (str_card))
-    # print('chainlist: %s, hand: %s, handlist: %s' % (chain_list, hand, hand_list))
     add = 0
     for index, chain in enumerate(chain_list):
         if len(chain) > 0:
@@ -395,9 +435,9 @@ def pick_chain(hand_list, count):
                         chains.append(str_chain)
             add += len(chain)
     hand_list = [int(card) for card in hand_list]
-    if len(chains) > 0 and count > 1:
-        print('chains: %s' % (chains))
+
     return (chains, hand_list)
+
 
 def pick_chain_v2(hand_list, count):
     chains = []
@@ -417,7 +457,7 @@ def pick_chain_v2(hand_list, count):
         formatted_hand = hand.replace('4', '0')
 
     chain_list = formatted_hand.split('0')
-    
+
     add = 0
     for index, chain in enumerate(chain_list):
         if len(chain) > 0:
@@ -437,7 +477,5 @@ def pick_chain_v2(hand_list, count):
             add += len(chain)
 
     hand_list = [int(card) for card in hand_list]
-    
+
     return (chains, hand_list)
-
-
