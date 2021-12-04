@@ -3,6 +3,7 @@ import pickle
 
 from douzero.env.game import GameEnv
 
+
 def load_card_play_models(card_play_model_path_dict):
     players = {}
 
