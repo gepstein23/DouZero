@@ -13,6 +13,7 @@ INDEX = {'3': 0, '4': 1, '5': 2, '6': 3, '7': 4,
          '8': 5, '9': 6, 'T': 7, 'J': 8, 'Q': 9,
          'K': 10, 'A': 11, '2': 12, 'B': 13, 'R': 14}
 
+
 class RLCardAgent(object):
 
     def __init__(self, position):
@@ -50,7 +51,6 @@ class RLCardAgent(object):
             # If two hands contain the lowest card, it prioritzes the one with the
             # most cards, ie a straight over a single.
             if last_two_cards[0] == '' and last_two_cards[1] == '':
-                print(get_best_actions(hand_cards))
                 chosen_action = None
                 comb = self.combine_cards(hand_cards)
                 min_card = hand_cards[0]
@@ -61,7 +61,6 @@ class RLCardAgent(object):
             # The rule of following cards
             # Rule:
             else:
-                print(last_move, get_best_actions(hand_cards, last_move))
                 the_type = CARD_TYPE[0][last_move][0][0]
                 # this is a tuple of type (pair, straight etc) and its rank of that type
                 chosen_action = ''
@@ -349,7 +348,8 @@ class RLCardAgentV2(RLCardAgent):
         # 7. Add lowest solo and pairs to trios
         solosAndPairs = comb['solo'] + comb['pair']
         # sort by rank
-        solosAndPairs.sort(key=lambda acs: int(CARD_TYPE[0][acs][0][1]), reverse=True)
+        solosAndPairs.sort(key=lambda acs: int(
+            CARD_TYPE[0][acs][0][1]), reverse=True)
 
         # reverse both lists so we can pop the lowest rank off the back of the list
         comb['pair'].reverse()
@@ -363,7 +363,7 @@ class RLCardAgentV2(RLCardAgent):
                 # remove the kicker from the solo / pair list
                 if len(el) == 2:
                     comb['pair'].pop()
-                else: 
+                else:
                     comb['solo'].pop()
 
                 # sort the trio so that the lower rank cards come first
@@ -371,7 +371,7 @@ class RLCardAgentV2(RLCardAgent):
                 new_ac = action_str2action_arr(new_acs)
                 new_ac.sort()
                 comb['trio'][i] = action_arr2action_str(new_ac)
-            
+
         # put the lists back in their normal order
         comb['pair'].reverse()
         comb['solo'].reverse()
@@ -380,6 +380,8 @@ class RLCardAgentV2(RLCardAgent):
 # Helper for getting the action arr
 # param ac: string of cards ex. 789TJ
 # returns result arr which is arr of card indexs ex. [7, 8, 9, 10, 11]
+
+
 def getActionArr(ac):
     chosen_action = ac
     result = [char for char in chosen_action]
@@ -408,6 +410,7 @@ def action_arr2action_str(ac):
     for i, c in enumerate(_ac):
         _ac[i] = EnvCard2RealCard[c]
     return ''.join(_ac)
+
 
 def action_str2action_arr(ac):
     _ac = []
