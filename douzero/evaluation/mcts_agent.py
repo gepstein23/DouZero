@@ -35,8 +35,6 @@ def get_num_teamcards(state):
 # This agent is called upon each time an action is to be selected.
 # Each time it is called upon, it is trained with MCTS a certain number of times
 # Each game this agent is used, it will update the saved mcts data to be used
-
-
 class MctsAgent:
 
     ######################################################################
@@ -46,27 +44,6 @@ class MctsAgent:
     def __init__(self, mcts_data_file_name=MCTS_DATA_FILE_NAME):
         self.name = 'MCTS'
         self.mcts_data_file_name = mcts_data_file_name
-
-        # Stores data about each node and the quality of each possible action
-        #self.mcts_data = {}
-
-    # # Loads stores MCTS data from the save file and stores in self.mcts_data as a dictionary
-    # def load_mcts_data(self):
-    #   # with open(self.mcts_data_file_name, 'r') as file:
-    #   #   mcts_data = file.read()
-    #   # mcts_data_dict = json.loads(mcts_data)
-    #   # return mcts_data_dict
-    #   return {}
-    #
-    # # Updates the MCTS Data file with the updated contents of self.mcts_data
-    # def save_mcts_data(self):
-    #   with open(self.mcts_data_file_name, 'w') as file:
-    #     file.write(json.dumps(self.mcts_data))
-
-    ######################################################################
-    ########################## ALGORITHM #################################
-    ######################################################################
-    # Follwing pseudo code from https://www.geeksforgeeks.org/ml-monte-carlo-tree-search-mcts/
 
     # Returns the best action from the curr_hand based on self.mcts_data
     # (The action that will lead to the child with the highest number of visits)
