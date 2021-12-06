@@ -1,6 +1,6 @@
 from rlcard.games.doudizhu.utils import CARD_TYPE
 
-from douzero.dmc.utils import act
+#from douzero.dmc.utils import act
 
 EnvCard2RealCard = {3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
                     8: '8', 9: '9', 10: 'T', 11: 'J', 12: 'Q',
@@ -13,8 +13,9 @@ INDEX = {'3': 0, '4': 1, '5': 2, '6': 3, '7': 4,
          '8': 5, '9': 6, 'T': 7, 'J': 8, 'Q': 9,
          'K': 10, 'A': 11, '2': 12, 'B': 13, 'R': 14}
 
-def get_best_actions(hand_cards, last_move = None):
-    print(hand_cards)
+
+def get_best_actions(hand_cards, last_move=None):
+
     combinations = get_combinations(hand_cards)
     if last_move == None:
         return get_best_leading_moves(hand_cards, combinations)
@@ -26,128 +27,134 @@ def get_best_actions(hand_cards, last_move = None):
 # TODO sometimes these may result in better plays to play a "worse" combos
 
 def get_combinations(hand):
-  '''Get optimal combinations of cards in hand
-  '''
-  comb = {'rocket': [], 'bomb': [], 'trio': [], 'trio_kickers': [], 'trio_chain': [],
-          'solo_chain': [], 'pair_chain': [], 'pair': [], 'solo': []}
-  # 1. pick rocket
-  if hand[-2:] == 'BR':
-      comb['rocket'].append('BR')
-      hand = hand[:-2]
-  # 2. pick bomb
-  hand_cp = hand
-  for index in range(len(hand_cp) - 3):
-      if hand_cp[index] == hand_cp[index+3]:
-          bomb = hand_cp[index: index+4]
-          comb['bomb'].append(bomb)
-          hand = hand.replace(bomb, '')
-  # 3. pick trio and trio_chain
-  hand_cp = hand
-  for index in range(len(hand_cp) - 2):
-      if hand_cp[index] == hand_cp[index+2]:
-          trio = hand_cp[index: index+3]
-          if len(comb['trio']) > 0 and INDEX[trio[-1]] < 12 and (INDEX[trio[-1]]-1) == INDEX[comb['trio'][-1][-1]]:
-              comb['trio'][-1] += trio
-          else:
-              comb['trio'].append(trio)
-          hand = hand.replace(trio, '')
-  only_trio = []
-  only_trio_chain = []
-  for trio in comb['trio']:
-      if len(trio) == 3:
-          only_trio.append(trio)
-      else:
-          only_trio_chain.append(trio)
-  comb['trio'] = only_trio
-  comb['trio_chain'] = only_trio_chain
+    '''Get optimal combinations of cards in hand
+    '''
+    comb = {'rocket': [], 'bomb': [], 'trio': [], 'trio_kickers': [], 'trio_chain': [],
+            'solo_chain': [], 'pair_chain': [], 'pair': [], 'solo': []}
+    # 1. pick rocket
+    if hand[-2:] == 'BR':
+        comb['rocket'].append('BR')
+        hand = hand[:-2]
+    # 2. pick bomb
+    hand_cp = hand
+    for index in range(len(hand_cp) - 3):
+        if hand_cp[index] == hand_cp[index + 3]:
+            bomb = hand_cp[index: index + 4]
+            comb['bomb'].append(bomb)
+            hand = hand.replace(bomb, '')
+    # 3. pick trio and trio_chain
+    hand_cp = hand
+    for index in range(len(hand_cp) - 2):
+        if hand_cp[index] == hand_cp[index + 2]:
+            trio = hand_cp[index: index + 3]
+            if len(comb['trio']) > 0 and INDEX[trio[-1]] < 12 and (INDEX[trio[-1]] - 1) == INDEX[comb['trio'][-1][-1]]:
+                comb['trio'][-1] += trio
+            else:
+                comb['trio'].append(trio)
+            hand = hand.replace(trio, '')
+    only_trio = []
+    only_trio_chain = []
+    for trio in comb['trio']:
+        if len(trio) == 3:
+            only_trio.append(trio)
+        else:
+            only_trio_chain.append(trio)
+    comb['trio'] = only_trio
+    comb['trio_chain'] = only_trio_chain
 
-  hand_list = card_str2list(hand)
+    hand_list = card_str2list(hand)
 
-  # The following two combos are the change from V1.
-  # 4. Pick Non Disruptive Pair Chains
-  chains, hand_list = pick_non_disruptive_pair_chains(hand_list)
-  comb['pair_chain'] = chains
+    # The following two combos are the change from V1.
+    # 4. Pick Non Disruptive Pair Chains
+    chains, hand_list = pick_non_disruptive_pair_chains(hand_list)
+    comb['pair_chain'] = chains
 
-  # 5. Pick solo chains
-  chains, hand_list = pick_chain_v2(hand_list, 1)
-  comb['solo_chain'] = chains
+    # 5. Pick solo chains
+    chains, hand_list = pick_chain_v2(hand_list, 1)
+    comb['solo_chain'] = chains
 
-  # update hand again with new hand list
-  hand = list2card_str(hand_list)
+    # update hand again with new hand list
+    hand = list2card_str(hand_list)
 
-  # 6. pick pair and solo
-  index = 0
-  while index < len(hand) - 1:
-      if hand[index] == hand[index+1]:
-          comb['pair'].append(hand[index] + hand[index+1])
-          index += 2
-      else:
-          comb['solo'].append(hand[index])
-          index += 1
-  if index == (len(hand) - 1):
-      comb['solo'].append(hand[index])
+    # 6. pick pair and solo
+    index = 0
+    while index < len(hand) - 1:
+        if hand[index] == hand[index + 1]:
+            comb['pair'].append(hand[index] + hand[index + 1])
+            index += 2
+        else:
+            comb['solo'].append(hand[index])
+            index += 1
+    if index == (len(hand) - 1):
+        comb['solo'].append(hand[index])
 
-  # 7. Add lowest solo and pairs to trios
-  solosAndPairs = comb['solo'] + comb['pair']
-  # sort by rank
-  solosAndPairs.sort(key=lambda acs: int(
-      CARD_TYPE[0][acs][0][1]), reverse=True)
+    # 7. Add lowest solo and pairs to trios
+    solosAndPairs = comb['solo'] + comb['pair']
+    # sort by rank
+    solosAndPairs.sort(key=lambda acs: int(
+        CARD_TYPE[0][acs][0][1]), reverse=True)
 
-  # reverse both lists so we can pop the lowest rank off the back of the list
-  comb['pair'].reverse()
-  comb['solo'].reverse()
+    # reverse both lists so we can pop the lowest rank off the back of the list
+    comb['pair'].reverse()
+    comb['solo'].reverse()
 
-  # add the lowest kickers to each each trio_kicker
-  for i in range(len(comb['trio'])):
-      if len(solosAndPairs) > 0:
-          el = solosAndPairs.pop()
-          # sort the trio so that the lower rank cards come first
-          new_acs = comb['trio'][i] + el
-          new_ac = action_str2action_arr(new_acs)
-          new_ac.sort()
-          comb['trio_kickers'].append(action_arr2action_str(new_ac))
+    # add the lowest kickers to each each trio_kicker
+    for i in range(len(comb['trio'])):
+        if len(solosAndPairs) > 0:
+            el = solosAndPairs.pop()
+            # sort the trio so that the lower rank cards come first
+            new_acs = comb['trio'][i] + el
+            new_ac = action_str2action_arr(new_acs)
+            new_ac.sort()
+            comb['trio_kickers'].append(action_arr2action_str(new_ac))
 
-  # put the lists back in their normal order
-  comb['pair'].reverse()
-  comb['solo'].reverse()
-  return comb
+    # put the lists back in their normal order
+    comb['pair'].reverse()
+    comb['solo'].reverse()
+    return comb
+
 
 def getFirstAndLastArr(arr):
     if len(arr) < 2:
-      return arr
-    
-    return arr[::len(arr)-1]
+        return arr
+
+    return arr[::len(arr) - 1]
+
 
 def convertActionListArr(arr):
-  return list(map(lambda tuple: (action_str2action_arr(tuple[0]), tuple[1]), arr))
+    return list(map(lambda tuple: (action_str2action_arr(tuple[0]), action_str2action_arr(tuple[1])), arr))
+
 
 def getNextHandTupleArr(hand, action_strs):
-  result = []
-  for acs in action_strs:
-    next_hand = hand
-    for c in acs:
-      next_hand = next_hand.replace(c, '')
-      result.append((acs, next_hand))
+    result = []
+    for acs in action_strs:
+        next_hand = hand
+        for c in acs:
+            next_hand = next_hand.replace(c, '')
+            result.append((acs, next_hand))
 
-  return result
+    return result
+
 
 def getNextHandTupleArrV2(hand, action_strs):
-  for action in action_strs:
-      hand = hand.replace(action, '')
+    for action in action_strs:
+        hand = hand.replace(action, '')
 
-  return hand
+    return hand
+
 
 def formatResultTuple(hand, action_strs):
-  return convertActionListArr(getNextHandTupleArr(hand, action_strs))
+    return convertActionListArr(getNextHandTupleArr(hand, action_strs))
+
 
 # Get a prioritzed array of all the best moves from your combinations
 def get_best_leading_moves(hand, combinations):
-  
-  action_strs = combinations['trio_chain'] + combinations['pair_chain'] + combinations['solo_chain'] \
-    + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['pair']) \
-      + getFirstAndLastArr(combinations['solo']) + combinations['bomb'] + combinations['rocket']
-  
-  return formatResultTuple(hand, action_strs)
+    action_strs = combinations['trio_chain'] + combinations['pair_chain'] + combinations['solo_chain'] \
+                  + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['pair']) \
+                  + getFirstAndLastArr(combinations['solo']) + combinations['bomb'] + combinations['rocket']
+
+    return formatResultTuple(hand, action_strs)
+
 
 TRIO_CHAIN = 'trio_chain'
 PAIR_CHAIN = 'pair_chain'
@@ -162,54 +169,59 @@ SOLO = 'solo'
 # Additionally, playing your highest ranked hands may be advantageous over lowest ranked to control
 # the board sometimes.
 def get_best_following_moves(hand, combinations, last_move):
-  the_type, last_rank = CARD_TYPE[0][last_move][0]
-  last_rank = int(last_rank)
-  moves = []
+    try:
+        the_type, last_rank = CARD_TYPE[0][last_move][0]
+    except:
+        last_move = last_move[::-1] #IF BEN FIXES THE HOW KICKERS ARE ADDED REMOVE THIS
+        the_type, last_rank = CARD_TYPE[0][last_move][0]
+    last_rank = int(last_rank)
+    moves = []
 
-  if PAIR_CHAIN in the_type:
-    for move in combinations['pair_chain']:
-      if len(move) >= len(last_move):
-        new_move = move[len(move) - len(last_move):]
-        this_rank = int(CARD_TYPE[0][new_move][0][1])
-        if this_rank > last_rank:
-          moves.append(new_move)
-  elif SOLO_CHAIN in the_type:
-    for move in combinations['solo_chain']:
-      if len(move) >= len(last_move):
-        new_move = move[len(move) - len(last_move):]
-        this_rank = int(CARD_TYPE[0][new_move][0][1])
-        if this_rank > last_rank:
-          moves.append(new_move)
-  elif TRIO == the_type:
-    for move in combinations['trio']:
-      this_rank = int(CARD_TYPE[0][move][0][1])
-      if this_rank > last_rank:
-        moves.append(move)
-  elif TRIO_SOLO == the_type:
-    for move in combinations['trio']:
-      this_rank = int(CARD_TYPE[0][move][0][1])
-      if this_rank > last_rank and len(combinations['solo']) > 0:
-        moves.append(move + combinations['solo'][0])
-  elif TRIO_PAIR == the_type:
-    for move in combinations['trio']:
-      this_rank = int(CARD_TYPE[0][move][0][1])
-      if this_rank > last_rank and len(combinations['pair']) > 0:
-        moves.append(move + combinations['pair'][0])
-  elif PAIR == the_type:
-    for move in combinations['pair']:
-      this_rank = int(CARD_TYPE[0][move][0][1])
-      if this_rank > last_rank:
-        moves.append(move)
-  elif SOLO == the_type:
-    for move in combinations['solo']:
-      this_rank = int(CARD_TYPE[0][move][0][1])
-      if this_rank > last_rank:
-        moves.append(move)
-  
-  moves = getFirstAndLastArr(moves)
+    if PAIR_CHAIN in the_type:
+        for move in combinations['pair_chain']:
+            if len(move) >= len(last_move):
+                new_move = move[len(move) - len(last_move):]
+                this_rank = int(CARD_TYPE[0][new_move][0][1])
+                if this_rank > last_rank:
+                    moves.append(new_move)
+    elif SOLO_CHAIN in the_type:
+        for move in combinations['solo_chain']:
+            if len(move) >= len(last_move):
+                new_move = move[len(move) - len(last_move):]
+                this_rank = int(CARD_TYPE[0][new_move][0][1])
+                if this_rank > last_rank:
+                    moves.append(new_move)
+    elif TRIO == the_type:
+        for move in combinations['trio']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank:
+                moves.append(move)
+    elif TRIO_SOLO == the_type:
+        for move in combinations['trio']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank and len(combinations['solo']) > 0:
+                moves.append(move + combinations['solo'][0])
+    elif TRIO_PAIR == the_type:
+        for move in combinations['trio']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank and len(combinations['pair']) > 0:
+                moves.append(move + combinations['pair'][0])
+    elif PAIR == the_type:
+        for move in combinations['pair']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank:
+                moves.append(move)
+    elif SOLO == the_type:
+        for move in combinations['solo']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank:
+                moves.append(move)
 
-  # convert to actions arrays and add pass as a valid move
-  return formatResultTuple(hand, moves) + [([], hand)]
+    moves = getFirstAndLastArr(moves)
+
+    # convert to actions arrays and add pass as a valid move
+    return formatResultTuple(hand, moves) + [([], action_str2action_arr(hand))]
+
 
 # Pick pair chains which results in removing more cards from hand than by playing the solo straight
 # surrounding it.
@@ -269,9 +281,9 @@ def pick_chain(hand_list, count):
                 if min_count != 0:
                     str_chain = ''
                     for num in range(len(chain)):
-                        str_chain += str_card[start+num]
+                        str_chain += str_card[start + num]
                         hand_list[start +
-                                  num] = int(hand_list[start+num]) - int(min(chain))
+                                  num] = int(hand_list[start + num]) - int(min(chain))
                     for _ in range(min_count):
                         chains.append(str_chain)
             add += len(chain)
@@ -309,9 +321,9 @@ def pick_chain_v2(hand_list, count):
                     str_chain = ''
                     for num in range(len(chain)):
                         # push 2 jacks to result if pair chain
-                        str_chain += (str_card[start+num] * count)
+                        str_chain += (str_card[start + num] * count)
                         hand_list[start +
-                                  num] = int(hand_list[start+num]) - int(min(chain))
+                                  num] = int(hand_list[start + num]) - int(min(chain))
                     for _ in range(min_count):
                         chains.append(str_chain)
             add += len(chain)
@@ -319,3 +331,11 @@ def pick_chain_v2(hand_list, count):
     hand_list = [int(card) for card in hand_list]
 
     return (chains, hand_list)
+
+def next_player(player):
+    if player == 'landlord':
+        return 'landlord_down'
+    elif player == 'landlord_down':
+        return 'landlord_up'
+    else:
+        return 'landlord'

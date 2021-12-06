@@ -2,7 +2,7 @@
 import random
 import json
 from . import util
-
+from ..env.game import InfoSet
 
 MCTS_DATA_FILE_NAME = 'C:\\Users\\Genevieve\\Desktop\\NEU\\Fall_2021\\ai\\DouZero\\douzero\\evaluation\\mcts_agent_data.txt'  # TODO
 VERBOSE = True
@@ -22,6 +22,13 @@ class Node:
         self.children = {} # action: resulting node
         self.num_team_cards = 0
         self.state = None
+
+
+def get_num_teamcards(state):
+    if state.player_position == 'landlord':
+        return len(state.all_handcards['landlord'])
+    else:
+        return len(state.all_handcards['landlord_up']) + len(state.all_handcards['landlord_down'])
 
 # **Modified** MCTS Agent:
 # This agent is called upon each time an action is to be selected.
@@ -84,50 +91,60 @@ class MctsAgent:
     # New state = our cards after playing the action, the opponents' cards after playing their next best action
     # The opponents right now choose the first action from the heuritic narrowed-down list
     def build_new_state(self, action, infoset):
-        curr_hand = infoset.player_hand_cards
-        curr_hand_str = util.list2card_str_v2(curr_hand)
-        action_str = util.list2card_str_v2(action)
-        new_player_cards = util.getNextHandTupleArrV2(curr_hand_str, action_str) # TODO check
+        last_action = action[0]
+        two_moves_ago = infoset.last_move
+        new_hand = action[1]
 
-
-        new_all_player_cards = []
-        for other_player_card_list in infoset.all_handcards.values():
-            card_list_str = util.list2card_str_v2(other_player_card_list)
-            best_action_tuple = util.get_best_actions(card_list_str)
-            best_opponent_action = random.choice(best_action_tuple)# for opponnet, for now pick random suggested move
-            if best_opponent_action == None or len(best_opponent_action) == 0:
-                best_opponent_action = []
+        new_all_player_cards = {infoset.player_position : new_hand}
+        curr_player = util.next_player(infoset.player_position)
+        while curr_player != infoset.player_position:
+            lm = None
+            if last_action == None or last_action == []: #not sure which
+                lm = two_moves_ago
             else:
-                best_opponent_action = best_opponent_action[0]
-            action_str = util.list2card_str_v2(best_opponent_action)
-            new_opponent_hand = util.getNextHandTupleArrV2(card_list_str, action_str)
-            new_all_player_cards.append(new_opponent_hand)
+                lm = last_action
+            hand = util.list2card_str_v2(infoset.all_handcards[curr_player])
+            lm = util.list2card_str_v2(lm)
+            best_action_tuple = util.get_best_actions(hand, lm)
+            best_opponent_action_tuple = random.choice(best_action_tuple)# for opponnet, for now pick random suggested move
+            if best_opponent_action_tuple == None or len(best_opponent_action_tuple) == 0:
+                best_opponent_action_tuple = ([],infoset.all_handcards[curr_player])
+            # else:
+            #     best_opponent_action_tuple = best_opponent_action_tuple
+            new_all_player_cards[curr_player] = best_opponent_action_tuple[1]
+            two_moves_ago = last_action
+            last_action = best_opponent_action_tuple[0]
+            curr_player = util.next_player(curr_player)
 
         our_last_move = None
 
-        state = (new_player_cards, new_all_player_cards, our_last_move)
+        state = InfoSet(infoset.player_position)
+        state.all_handcards = new_all_player_cards
+        state.last_move = last_action
         node = Node()
         node.state = state
+        node.num_team_cards = get_num_teamcards(state)
         return node
 
     def fill_node(self, root_node, depth):
-        if depth == 0:
-            return root_node
-
-        for child in root_node.children:
-
-            self.fill_node(self, child, depth - 1)
+        pass
+        # if depth == 0:
+        #     return root_node
+        # BROKEN
+        # for action_child_pair in root_node.children:
+        #
+        #     self.fill_node(action_child_pair[1], depth - 1)
 
     def create_tree(self, infoset, best_action_tuple):
         global TREE_TARGET_DEPTH
         root_node = Node()
         for action in best_action_tuple:
-            action_move = action[0]
-            child_node = self.build_new_state(action_move, infoset)
-            root_node.children[tuple(action_move)] = child_node
+            child_node = self.build_new_state(action, infoset)
+            root_node.children[tuple(action[0])] = child_node
 
         self.fill_node(root_node, TREE_TARGET_DEPTH)
-
+        root_node.state = infoset
+        root_node.num_team_cards = get_num_teamcards(infoset)
         return root_node
 
     # TODO remove this eventually
@@ -149,11 +166,11 @@ class MctsAgent:
             if child_node.num_team_cards < lowest_num_cards_left:
                 lowest_num_cards_left = child_node.num_team_cards
                 best_action = action
-
-        result = list(list(best_action))
+        if best_action == None:
+            return random.choice(infoset.legal_actions)
+        result = list(best_action)
         result = self.handle_invalid_result(result, infoset)
 
-        legal_moves = infoset.legal_actions
         return result
 
 
