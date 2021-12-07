@@ -6,6 +6,8 @@ https://gist.github.com/qpwo/c538c6f73727e254fdc7fab81024f6e1
 """
 from collections import deque
 from collections import namedtuple
+
+from douzero.dmc.utils import act
 from . import util
 import random
 from abc import ABC, abstractmethod
@@ -102,7 +104,6 @@ class MCTS:
         def uct(n):
             avg_score = self.Q[n] / self.N[n]
             explore_val = math.sqrt(log_N_vertex / self.N[n])
-            # print('avg_score: %f, explore_val: %f weight: %f' % (avg_score, explore_val, float(self.exploration_weight)))
             "Upper confidence bound for trees"
             return avg_score + self.exploration_weight * explore_val
 
@@ -192,6 +193,7 @@ class DouDizhuNode(_DD, Node):
         children = {
             self.make_action(action_tuple) for action_tuple in action_tuples
         }
+
         return children
 
     def find_random_child(self):
@@ -220,7 +222,6 @@ class DouDizhuNode(_DD, Node):
         else:
             return landlord_count - min_farmer_count
 
-    # TODO Figure out why triples with un updated hands are being added as children
     def make_action(self, action_tuple):
         all_handcards = dict()
         position = self.position
@@ -283,7 +284,7 @@ class MctsAgent:
     ######################################################################
     ########################## UTILITIES #################################
     ######################################################################
-    def __init__(self, position, depth=5, num_rollouts=1000):
+    def __init__(self, position, depth=4, num_rollouts=100):
         self.name = 'MCTS'
         self.position = position
         self.depth = depth

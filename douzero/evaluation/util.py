@@ -1,4 +1,7 @@
+import copy
 from rlcard.games.doudizhu.utils import CARD_TYPE
+
+from douzero.dmc.utils import act
 
 EnvCard2RealCard = {3: '3', 4: '4', 5: '5', 6: '6', 7: '7',
                     8: '8', 9: '9', 10: 'T', 11: 'J', 12: 'Q',
@@ -26,12 +29,6 @@ def get_best_actions(hand_cards, last_two_moves):
     else:
         moves = get_best_following_moves(hand_cards, combinations, lm)
 
-    if len(moves) == 0:
-        print('lm', lm)
-        print(hand_cards)
-        print(combinations)
-        print('last two moves', last_two_moves)
-        print('tuples', moves)
     return moves
 
 # Get the best combinations from your hand.
@@ -142,23 +139,12 @@ def convertActionListArr(arr):
 
 
 def getNextHandTupleArr(hand, action_strs):
-    result = []
-    hand_str = env_arr2real_card_str(hand)
-    for acs in action_strs:
-        next_hand_str = hand_str
-        for c in acs:
-            next_hand_str = next_hand_str.replace(c, '')
-            result.append((acs, next_hand_str))
-
-    return result
-
-
-def getNextHandTupleArrV2(hand, action_strs):
-    for action in action_strs:
-        hand = hand.replace(action, '')
-
-    return hand
-
+    def filterHand(action_str): 
+        hand_str = env_arr2real_card_str(hand)
+        for c in action_str:
+            hand_str = hand_str.replace(c, '')
+        return (action_str, hand_str)
+    return list(map(filterHand, action_strs))
 
 def formatResultTuple(hand, action_strs):
     return convertActionListArr(getNextHandTupleArr(hand, action_strs))
@@ -170,8 +156,10 @@ def get_best_leading_moves(hand, combinations):
         + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['trio']) \
         + getFirstAndLastArr(combinations['pair']) + getFirstAndLastArr(combinations['solo']) + \
         combinations['bomb'] + combinations['rocket']
-    
-    return formatResultTuple(hand, action_strs)
+
+    result = formatResultTuple(hand, action_strs)
+
+    return result
 
 
 TRIO_CHAIN = 'trio_chain'
@@ -241,7 +229,8 @@ def get_best_following_moves(hand, combinations, last_move):
             if this_rank > last_rank:
                 moves.append(move)
 
-    moves = getFirstAndLastArr(moves)
+    moves = getFirstAndLastArr(
+        moves) + combinations['bomb'] + combinations['rocket']
 
     # convert to actions arrays and add pass as a valid move
     return formatResultTuple(hand, moves) + [([], hand)]
@@ -274,13 +263,6 @@ def count_list2card_str(hand_list):
     for index, count in enumerate(hand_list):
         card_str += cards[index] * count
     return card_str
-
-# def list2card_str_v2(hand_list):
-#   card_str = ''
-#   # print('v2', hand_list)
-#   for card in hand_list:
-#     card_str += EnvCard2RealCard[card]
-#   return card_str
 
 
 def env_arr2real_card_str(ac):
