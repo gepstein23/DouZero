@@ -22,10 +22,19 @@ def get_best_actions(hand_cards, last_two_moves):
         lm = two_moves_ago
 
     combinations = get_combinations(hand_cards)
-    if len(last_move) == 0:
-        return get_best_leading_moves(hand_cards, combinations)
+    moves = []
+    if len(lm) == 0:
+        moves = get_best_leading_moves(hand_cards, combinations)
     else:
-        return get_best_following_moves(hand_cards, combinations, lm)
+        moves = get_best_following_moves(hand_cards, combinations, lm)
+
+    if len(moves) == 0:
+        print('lm', lm)
+        print(hand_cards)
+        print(combinations)
+        print('last two moves', last_two_moves)
+        print('tuples', moves)
+    return moves
 
 # Get the best combinations from your hand.
 # TODO generate all chains, trios recursively and the solos / pairs that arise from that because
@@ -100,23 +109,26 @@ def get_combinations(hand):
     solosAndPairs.sort(key=lambda acs: int(
         CARD_TYPE[0][acs][0][1]), reverse=True)
 
-    # reverse both lists so we can pop the lowest rank off the back of the list
-    comb['pair'].reverse()
-    comb['solo'].reverse()
+    # reverse trio so we can pop trios we've added kickers to off the back
+    comb['trio'].reverse()
 
+    popFromTrioCount = 0
     # add the lowest kickers to each each trio_kicker
     for i in range(len(comb['trio'])):
         if len(solosAndPairs) > 0:
             el = solosAndPairs.pop()
             # sort the trio so that the lower rank cards come first
             new_acs = comb['trio'][i] + el
+            popFromTrioCount += 1
             new_ac = real_card_str2env_arr(new_acs)
             new_ac.sort()
             comb['trio_kickers'].append(env_arr2real_card_str(new_ac))
 
+    for i in range(popFromTrioCount):
+        comb['trio'].pop()
+
     # put the lists back in their normal order
-    comb['pair'].reverse()
-    comb['solo'].reverse()
+    comb['trio'].reverse()
     return comb
 
 
@@ -156,8 +168,8 @@ def formatResultTuple(hand, action_strs):
 # Get a prioritzed array of all the best moves from your combinations
 def get_best_leading_moves(hand, combinations):
     action_strs = combinations['trio_chain'] + combinations['pair_chain'] + combinations['solo_chain'] \
-        + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['pair']) \
-        + getFirstAndLastArr(combinations['solo']) + \
+        + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['trio']) \
+        + getFirstAndLastArr(combinations['pair']) + getFirstAndLastArr(combinations['solo']) + \
         combinations['bomb'] + combinations['rocket']
 
     return formatResultTuple(hand, action_strs)

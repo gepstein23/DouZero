@@ -25,27 +25,29 @@ def debug(*msgs):
 
 
 class MctsState:
-    def __init__(self, position, last_two_moves, landlord_hand, landlord_down_hand, landlord_up_hand):
+    def __init__(self, position, last_two_moves, all_handcards):
         self.position = position
         self.last_two_moves = last_two_moves
-        self.landlord_hand = landlord_hand
-        self.landlord_down_hand = landlord_down_hand
-        self.landlord_up_hand = landlord_up_hand
+        self.all_handcards = all_handcards
 
     def getScore(self):
         if self.position == 'landlord':
-            return len(self.landlord_hand)
+            return len(self.all_handcards['landlord'])
         else:
-            min_cards = len(self.landlord_down_hand) \
-                if len(self.landlord_down_hand) < len(self.landlord_up_hand) else len(self.landlord_up_hand)
+            min_cards = len(self.all_handcards['landlord_down']) \
+                if len(self.all_handcards['landlord_down']) < len(self.all_handcards['landlord_up']) \
+                else len(self.all_handcards['landlord_up'])
 
             return min_cards
 
+
 class Node:
-    def __init__(self):
+    def __init__(self, state):
+        self.state = state  # MCTS Object
         self.children = {}  # action: resulting node
-        # TODO define class based represenation of this
-        self.state = None  # info set object currently
+
+    def getScore(self):
+        return self.state.getScore()
 
 # **Modified** MCTS Agent:
 # This agent is called upon each time an action is to be selected.
@@ -69,14 +71,14 @@ class MctsAgent:
 
         card_str_list = util.env_arr2real_card_str(curr_hand)
         # print('last_two_moves', infoset.last_two_moves)
-        best_action_tuple = util.get_best_actions(
+        best_action_tuples = util.get_best_actions(
             card_str_list, infoset.last_two_moves)
 
         # print('bestactiontuple', list(map(lambda x: x[0], best_action_tuple)))
         # print('legal actions', infoset.legal_actions)
-        tree = self.create_tree(infoset, best_action_tuple)
+        tree = self.create_tree(infoset, best_action_tuples)
 
-        action = self.choose_best_action(tree, infoset)
+        action = self.choose_best_action_from_children(tree, infoset)
 
         if action not in infoset.legal_actions:
             print("ILLEGAL ACTION", action)
@@ -91,101 +93,73 @@ class MctsAgent:
 
         return action
 
-    # Returns the best action from the curr_hand based on self.mcts_data
-    # (The action that will lead to the child with the highest number of visits)
-    # def get_best_action(self, curr_hand, infoset):
-    #     legal_moves = infoset.legal_actions
-    #     if len(legal_moves[0]) == 0:
-    #         return []
-
-    #     # Picks the action that will lead to the child with the highest number of visits
-    #     card_str_list = util.env_arr2real_card_str(curr_hand)
-    #     best_action_tuple = util.get_best_actions(card_str_list, infoset=infoset)
-    #     best_legal_moves = []
-    #     for action in best_action_tuple:
-    #         action = action[0]
-    #         if legal_moves.__contains__(action):
-    #             best_legal_moves.append(action)
-    #     if len(best_legal_moves) == 0:
-    #         if len(legal_moves) == 0:
-    #             return []
-    #         else:
-    #             # we didn't generate an action when there are legal moves
-    #             return legal_moves[0]
-    #     else:
-    #         return best_legal_moves[0]  # MCTS implementation
-
     # New state = our cards after playing the action, the opponents' cards after playing their next best action
     # The opponents right now choose the first action from the heuritic narrowed-down list
-    def build_new_state(self, action_tuple, state):
-        infoset = copy.deepcopy(state)
-        last_move, new_hand = action_tuple
-        # print('last_move', last_move)
-        two_moves_ago = infoset.last_move
-        # print('two_moves_ago', two_moves_ago)
+    def build_child_node(self, action_tuple, parent_state):
+        new_state = copy.deepcopy(parent_state)
 
-        # update infoset / state with new hand
-        new_all_player_cards = {infoset.player_position: new_hand}
+        last_move, player_hand = action_tuple
 
-        # update the "cur player" position
-        curr_player = util.next_player(infoset.player_position)
+        # update the last two moves now that we have taken another action
+        updated_last_two_moves = [last_move, new_state.last_two_moves[0]]
 
-        # play one round of play
-        while curr_player != infoset.player_position:
+        # Update the players hand in all_handcards
+        new_state.all_handcards[new_state.position] = player_hand
 
-            # get the hand of the current player
-            hand = util.env_arr2real_card_str(
-                infoset.all_handcards[curr_player])
+        for i in range(2):
+            # increment to the next player
+            next_player_position = util.next_player(parent_state.position)
 
-            best_action_tuple = util.get_best_actions(
-                hand, [last_move, two_moves_ago])
+            best_action_tuples = util.get_best_actions(
+                util.env_arr2real_card_str(
+                    parent_state.all_handcards[next_player_position]),
+                updated_last_two_moves)
 
-            # for opponnet, for now pick random suggested move
-            new_action, new_hand = random.choice(best_action_tuple)
+            # make a random choice for the next player based on their best actions
+            action, next_hand = random.choice(best_action_tuples)
 
-            new_all_player_cards[curr_player] = new_hand.copy()
-            two_moves_ago = last_move.copy()
-            last_move = new_action.copy()
-            curr_player = util.next_player(curr_player)
+            # update last moves
+            updated_last_two_moves = [action, updated_last_two_moves[0]]
 
-        state = InfoSet(infoset.player_position)
-        state.all_handcards = new_all_player_cards
-        state.last_move = last_move
-        node = Node()
-        node.state = state
-        node.num_team_cards = get_num_teamcards(state)
+            # update the players hand at this position
+            new_state.all_handcards[next_player_position] = next_hand
+
+        new_state.last_two_moves = updated_last_two_moves
+
+        node = Node(new_state)
+
         return node
 
-    def fill_node(self, root_node, depth):
-        pass
-        # if depth == 0:
-        #   return root_node
-        # BROKEN
-        # for action_child_pair in root_node.children:
-        #
-        #   self.fill_node(action_child_pair[1], depth - 1)
+    # def fill_node(self, root_node, depth):
+    #     pass
+    #     # if depth == 0:
+    #     #   return root_node
+    #     # BROKEN
+    #     # for action_child_pair in root_node.children:
+    #     #
+    #     #   self.fill_node(action_child_pair[1], depth - 1)
 
-    def create_tree(self, infoset, best_action_tuple):
+    def create_tree(self, infoset, best_action_tuples):
         global TREE_TARGET_DEPTH
-        root_node = Node()
+        state = MctsState(infoset.player_position,
+                          infoset.last_two_moves, infoset.all_handcards)
+        root_node = Node(state)
 
         # create a node for each action from the hand
-        for action in best_action_tuple:
-            child_node = self.build_new_state(action, infoset)
-            root_node.children[tuple(action[0])] = child_node
+        for action_tuple in best_action_tuples:
+            child_node = self.build_child_node(action_tuple, state)
+            root_node.children[tuple(action_tuple[0])] = child_node
 
-        self.fill_node(root_node, TREE_TARGET_DEPTH)
-        root_node.state = infoset
-        root_node.num_team_cards = get_num_teamcards(infoset)
+        # self.fill_node(root_node, TREE_TARGET_DEPTH)
         return root_node
 
-    def choose_best_action(self, tree, infoset):
+    def choose_best_action_from_children(self, tree, infoset):
         lowest_num_cards_left = float('inf')
         best_action = None
         for action in tree.children:
             child_node = tree.children[action]
-            if child_node.num_team_cards < lowest_num_cards_left:
-                lowest_num_cards_left = child_node.num_team_cards
+            if child_node.getScore() < lowest_num_cards_left:
+                lowest_num_cards_left = child_node.getScore()
                 best_action = action
         if best_action == None:
             return random.choice(infoset.legal_actions)
