@@ -170,7 +170,7 @@ def get_best_leading_moves(hand, combinations):
         + getFirstAndLastArr(combinations['trio_kickers']) + getFirstAndLastArr(combinations['trio']) \
         + getFirstAndLastArr(combinations['pair']) + getFirstAndLastArr(combinations['solo']) + \
         combinations['bomb'] + combinations['rocket']
-
+    
     return formatResultTuple(hand, action_strs)
 
 

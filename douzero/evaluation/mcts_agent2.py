@@ -33,12 +33,16 @@ class MCTS:
 
         if node not in self.children:
             return node.find_random_child()
-
+        
         def score(n):
             if self.N[n] == 0:
                 return float("-inf")  # avoid unseen moves
+
+            print((n.player_action, n.all_handcards[n.position]), self.Q[n] / self.N[n])
             return self.Q[n] / self.N[n]  # average reward
 
+        print('------------\n')
+        
         return max(self.children[node], key=score)
 
     def do_rollout(self, node):
@@ -168,6 +172,16 @@ class DouDizhuNode(_DD, Node):
 
         return False
 
+    def is_player_winner(self):
+      landlord_count = len(self.all_handcards['landlord'])
+      landlord_down_count = len(self.all_handcards['landlord_down'])
+      landlord_up_count = len(self.all_handcards['landlord_up'])
+
+      if self.position == 'landlord':
+        return landlord_count == 0
+      else:
+        return landlord_up_count == 0 or landlord_down_count == 0
+
     def find_children(self):
         if self.is_terminal():
             return set()
@@ -175,9 +189,10 @@ class DouDizhuNode(_DD, Node):
         action_tuples = util.get_best_actions(
             self.all_handcards[self.position], self.last_two_moves)
 
-        return {
+        children = {
             self.make_action(action_tuple) for action_tuple in action_tuples
         }
+        return children
 
     def find_random_child(self):
         if self.is_terminal():
@@ -191,6 +206,9 @@ class DouDizhuNode(_DD, Node):
 
     # We want the have the largest difference between our cards and their cards
     def reward(self):
+        if self.is_terminal():
+          return 10 if self.is_player_winner() else -10
+
         landlord_count = len(self.all_handcards['landlord'])
         landlord_down_count = len(self.all_handcards['landlord_down'])
         landlord_up_count = len(self.all_handcards['landlord_up'])
@@ -202,18 +220,17 @@ class DouDizhuNode(_DD, Node):
         else:
             return landlord_count - min_farmer_count
 
+    # TODO Figure out why triples with un updated hands are being added as children
     def make_action(self, action_tuple):
-        last_move, player_hand = action_tuple
-
         all_handcards = dict()
         position = self.position
+        # Update the players hand in all_handcards and hand
+        last_move, player_hand = action_tuple
         player_action = last_move
+        all_handcards[position] = player_hand
 
         # update the last two moves now that we have taken another action
         updated_last_two_moves = [last_move, self.last_two_moves[0]]
-
-        # Update the players hand in all_handcards
-        all_handcards[position] = player_hand
 
         # set
         cur_player_position = position
@@ -222,9 +239,15 @@ class DouDizhuNode(_DD, Node):
             # increment to the next player
             cur_player_position = util.next_player(cur_player_position)
 
+            # get the best actions for theis player
             best_action_tuples = util.get_best_actions(
                 self.all_handcards[cur_player_position],
                 updated_last_two_moves)
+            
+            # remove passing as an option from opponents if they have other options
+            passing_action_tuple = ([], self.all_handcards[cur_player_position])
+            if len(best_action_tuples) > 1 and passing_action_tuple in best_action_tuples:
+              best_action_tuples.remove(passing_action_tuple)
 
             # make a random choice for the next player based on their best actions
             action, next_hand = random.choice(best_action_tuples)
@@ -235,8 +258,8 @@ class DouDizhuNode(_DD, Node):
             # update the players hand at this position
             all_handcards[cur_player_position] = next_hand
 
-            # update the state with the players last two moves
-            last_two_moves = updated_last_two_moves
+        # update the state with the players last two moves
+        last_two_moves = updated_last_two_moves
 
         return DouDizhuNode(position, player_action, last_two_moves, all_handcards, False)
 
@@ -260,7 +283,7 @@ class MctsAgent:
     ######################################################################
     ########################## UTILITIES #################################
     ######################################################################
-    def __init__(self, position, depth=4, num_rollouts=50):
+    def __init__(self, position, depth=5, num_rollouts=1000):
         self.name = 'MCTS'
         self.position = position
         self.depth = depth
@@ -270,7 +293,7 @@ class MctsAgent:
     # Saves the updated data to the save file
     # Returns the best action
     def act(self, infoset):
-        tree = MCTS()
+        tree = MCTS(depth=self.depth)
         node = DouDizhuNode(infoset.player_position, [],
                             infoset.last_two_moves, infoset.all_handcards, True)
 
@@ -284,6 +307,9 @@ class MctsAgent:
         best_node = tree.choose(node)
 
         action = best_node.player_action
+
+        print('CHOSEN ACTION:', action)
+        
 
         assert action in infoset.legal_actions
 
