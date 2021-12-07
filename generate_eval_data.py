@@ -29,6 +29,7 @@ def generate():
 
 if __name__ == '__main__':
     flags = get_parser().parse_args()
+    print(flags)
     output_pickle = flags.output + '.pkl'
 
     print("output_pickle:", output_pickle)

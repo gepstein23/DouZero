@@ -1,5 +1,4 @@
-
-from math import inf
+import math
 import random
 import json
 import copy
@@ -25,8 +24,9 @@ def debug(*msgs):
 
 
 class MctsState:
-    def __init__(self, position, last_two_moves, all_handcards):
+    def __init__(self, position, player_action, last_two_moves, all_handcards):
         self.position = position
+        self.player_action = action
         self.last_two_moves = last_two_moves
         self.all_handcards = all_handcards
 
@@ -42,12 +42,28 @@ class MctsState:
 
 
 class Node:
-    def __init__(self, state):
+    def __init__(self, state=None, is_root=False, parent_key=None):
         self.state = state  # MCTS Object
-        self.children = {}  # action: resulting node
+        self.count = 0
+        self.score = 0
+        self.is_root = is_root
 
-    def getScore(self):
-        return self.state.getScore()
+    def reward(self):
+        return self.score / self.count
+
+    def is_terminal(self):
+        if self.is_root or self.state == None:
+            return
+
+        for hand in self.state.all_handcards:
+            print(hand)
+            if len(hand) == 0:
+                return True
+
+        return False
+
+    def find_random_child(self):
+        return random.choice(self.children)
 
 # **Modified** MCTS Agent:
 # This agent is called upon each time an action is to be selected.
@@ -59,47 +75,94 @@ class MctsAgent:
     ######################################################################
     ########################## UTILITIES #################################
     ######################################################################
-    def __init__(self, position):
+    def __init__(self, position, depth=2, num_rollouts=10, exploration_weight=0.8):
         self.name = 'MCTS'
-        self.position = 'position'
+        self.position = position
+        self.depth = depth
+        self.num_rollouts = num_rollouts
+        self.children = dict()
+        self.exploration_weight = exploration_weight
 
     # Runs the given number of iterations PER action taken
     # Saves the updated data to the save file
     # Returns the best action
-    def act(self, infoset, num_iterations=10):
-        curr_hand = infoset.player_hand_cards
+    def act(self, infoset):
 
-        card_str_list = util.env_arr2real_card_str(curr_hand)
-        best_action_tuples = util.get_best_actions(
-            card_str_list, infoset.last_two_moves)
+        state = MctsState(infoset.player_position, [],
+                          infoset.last_two_moves, infoset.all_handcards)
 
-        tree = self.create_tree(infoset, best_action_tuples)
-        action = self.choose_best_action_from_children(tree, infoset)
+        root_node = Node(state, is_root=True)
+
+        for _ in range(self.num_rollouts):
+            self.do_rollout(root_node)
+
+        action = self.choose_best_action(root_node, infoset)
 
         assert action in infoset.legal_actions
 
         return action
 
-    def create_tree(self, infoset, best_action_tuples):
-        global TREE_TARGET_DEPTH
-        state = MctsState(infoset.player_position,
-                          infoset.last_two_moves, infoset.all_handcards)
-        root_node = Node(state)
+    def do_rollout(self, root_node):
+        path = self.select(root_node)
+        self.expand_tree(root_node)
+        action_str = util.env_arr2real_card_str(action_tuple[0])
+        reward = self.simulate(self.children[root_node])
+        self.backpropogate(action_tuple, reward)
 
-        # create a node for each action from the hand
+    def select(self, node):
+        "Find an unexplored descendent of `node`"
+        path = []
+        while True:
+            path.append(node)
+            if node not in self.children or not self.children[node]:
+                # node is either unexplored or terminal
+                return path
+            unexplored = self.children[node] - self.children.keys()
+            if unexplored:
+                n = unexplored.pop()
+                path.append(n)
+                return path
+            node = self.uct_select(node)  # descend a layer deeper
+
+    def uct_select(self, node):
+        "Select a child of node, balancing exploration & exploitation"
+
+        # All children of node should already be expanded:
+        assert all(n in self.children for n in self.children[node])
+
+        log_N_vertex = math.log(node.count)
+
+        def uct(n):
+            "Upper confidence bound for trees"
+            return node.score / node.count + self.exploration_weight * math.sqrt(
+                log_N_vertex / node.count
+            )
+
+        return max(self.children[node], key=uct)
+
+    def expand_tree(self, node):
+        if node in self.children:
+            return  # already expanded
+
+        state = node.state
+        hand_str = util.env_arr2real_card_str(
+            state.all_handcards[state.position])
+        best_action_tuples = util.get_best_actions(
+            hand_str, state.last_two_moves)
+
         for action_tuple in best_action_tuples:
-            child_node = self.build_child_node(action_tuple, state)
-            root_node.children[tuple(action_tuple[0])] = child_node
-
-        # self.fill_node(root_node, TREE_TARGET_DEPTH)
-        return root_node
+            self.children[node] = self.build_child_node(
+                action_tuple, node.state)
 
     # New state = our cards after playing the action, the opponents' cards after playing their next best action
     # The opponents right now choose the first action from the heuritic narrowed-down list
+
     def build_child_node(self, action_tuple, parent_state):
         new_state = copy.deepcopy(parent_state)
 
         last_move, player_hand = action_tuple
+
+        new_state.player_action = last_move
 
         # update the last two moves now that we have taken another action
         updated_last_two_moves = [last_move, new_state.last_two_moves[0]]
@@ -113,8 +176,7 @@ class MctsAgent:
             next_player_position = util.next_player(parent_state.position)
 
             best_action_tuples = util.get_best_actions(
-                util.env_arr2real_card_str(
-                    parent_state.all_handcards[next_player_position]),
+                parent_state.all_handcards[next_player_position],
                 updated_last_two_moves)
 
             # make a random choice for the next player based on their best actions
@@ -131,54 +193,31 @@ class MctsAgent:
 
         return Node(new_state)
 
-    def choose_best_action_from_children(self, tree, infoset):
+    def simulate(self, node):
+        "Returns the reward for a random simulation (to completion) of `node`"
+        cur_depth = 0
+        while cur_depth < self.depth:
+            if node.is_terminal():
+                return node.reward()
+            node = node.find_random_child()
+            cur_depth += 1
+        return node.reward()
+
+    def backpropogate(self, path, reward):
+        "Send the reward back up to the ancestors of the leaf"
+        for node in reversed(path):
+            node.count += 1
+            node.score += reward
+
+    def choose_best_action(self, root_node, infoset):
         lowest_num_cards_left = float('inf')
         best_action = None
-        for action in tree.children:
-            child_node = tree.children[action]
+        for child_node in self.children[root_node]:
             if child_node.getScore() < lowest_num_cards_left:
                 lowest_num_cards_left = child_node.getScore()
-                best_action = action
+                best_action = child_node.player_action
         if best_action == None:
             return random.choice(infoset.legal_actions)
         result = list(best_action)
 
         return result
-
-    # def fill_node(self, root_node, depth):
-    #     pass
-    #     # if depth == 0:
-    #     #   return root_node
-    #     # BROKEN
-    #     # for action_child_pair in root_node.children:
-    #     #
-    #     #   self.fill_node(action_child_pair[1], depth - 1)
-
-    # def traverse_round_tree(self, infoset):
-    #   target_leaf_hand = None  # TODO
-    #
-    #   # while fully_expanded(node):
-    #   #   node = best_uct(node)
-    #   #
-    #   # # in case no children are present / node is terminal
-    #   # return pick_univisted(node.children) or node
-    #
-    #   return target_leaf_hand
-    #
-    # def round_rollout_policy(self, legal_actions_from_hand):
-    #   return random.choice(legal_actions_from_hand)
-    #
-    # def rollout_round(self, target_leaf_hand):
-    #   simulation_result = None  # TODO
-    #   #   while non_terminal(node):
-    #   #     node = rollout_policy(node)
-    #   #   return result(node)
-    #   return simulation_result
-    #
-    # def backpropagate(self, target_leaf_hand, simulation_result):
-    #   # TODO update the mcts data??
-    #
-    #   #   if is_root(node) return
-    #   #   node.stats = update_stats(node, result)
-    #   #   backpropagate(node.parent)
-    #   return None  # TODO nothing to return

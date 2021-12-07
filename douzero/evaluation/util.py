@@ -19,7 +19,7 @@ def get_best_actions(hand_cards, last_two_moves):
     if len(last_move) == 0:
         lm = two_moves_ago
 
-    combinations = get_combinations(hand_cards)
+    combinations = get_combinations(env_arr2real_card_str(hand_cards))
     moves = []
     if len(lm) == 0:
         moves = get_best_leading_moves(hand_cards, combinations)
@@ -143,11 +143,12 @@ def convertActionListArr(arr):
 
 def getNextHandTupleArr(hand, action_strs):
     result = []
+    hand_str = env_arr2real_card_str(hand)
     for acs in action_strs:
-        next_hand = hand
+        next_hand_str = hand_str
         for c in acs:
-            next_hand = next_hand.replace(c, '')
-            result.append((acs, next_hand))
+            next_hand_str = next_hand_str.replace(c, '')
+            result.append((acs, next_hand_str))
 
     return result
 
@@ -243,7 +244,7 @@ def get_best_following_moves(hand, combinations, last_move):
     moves = getFirstAndLastArr(moves)
 
     # convert to actions arrays and add pass as a valid move
-    return formatResultTuple(hand, moves) + [([], real_card_str2env_arr(hand))]
+    return formatResultTuple(hand, moves) + [([], hand)]
 
 
 # Pick pair chains which results in removing more cards from hand than by playing the solo straight
