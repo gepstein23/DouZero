@@ -70,28 +70,29 @@ class MctsAgent:
         curr_hand = infoset.player_hand_cards
 
         card_str_list = util.env_arr2real_card_str(curr_hand)
-        # print('last_two_moves', infoset.last_two_moves)
         best_action_tuples = util.get_best_actions(
             card_str_list, infoset.last_two_moves)
 
-        # print('bestactiontuple', list(map(lambda x: x[0], best_action_tuple)))
-        # print('legal actions', infoset.legal_actions)
         tree = self.create_tree(infoset, best_action_tuples)
-
         action = self.choose_best_action_from_children(tree, infoset)
-
-        if action not in infoset.legal_actions:
-            print("ILLEGAL ACTION", action)
-            print(infoset.last_two_moves)
-            print(infoset.legal_actions)
-
-            # print(curr_hand)
-            # print(infoset.all_handcards)
-            # print(infoset.num_cards_left_dict)
 
         assert action in infoset.legal_actions
 
         return action
+
+    def create_tree(self, infoset, best_action_tuples):
+        global TREE_TARGET_DEPTH
+        state = MctsState(infoset.player_position,
+                          infoset.last_two_moves, infoset.all_handcards)
+        root_node = Node(state)
+
+        # create a node for each action from the hand
+        for action_tuple in best_action_tuples:
+            child_node = self.build_child_node(action_tuple, state)
+            root_node.children[tuple(action_tuple[0])] = child_node
+
+        # self.fill_node(root_node, TREE_TARGET_DEPTH)
+        return root_node
 
     # New state = our cards after playing the action, the opponents' cards after playing their next best action
     # The opponents right now choose the first action from the heuritic narrowed-down list
@@ -106,6 +107,7 @@ class MctsAgent:
         # Update the players hand in all_handcards
         new_state.all_handcards[new_state.position] = player_hand
 
+        # choose random actions for the other players and update their state
         for i in range(2):
             # increment to the next player
             next_player_position = util.next_player(parent_state.position)
@@ -124,34 +126,10 @@ class MctsAgent:
             # update the players hand at this position
             new_state.all_handcards[next_player_position] = next_hand
 
+        # update the state with the players last two moves
         new_state.last_two_moves = updated_last_two_moves
 
-        node = Node(new_state)
-
-        return node
-
-    # def fill_node(self, root_node, depth):
-    #     pass
-    #     # if depth == 0:
-    #     #   return root_node
-    #     # BROKEN
-    #     # for action_child_pair in root_node.children:
-    #     #
-    #     #   self.fill_node(action_child_pair[1], depth - 1)
-
-    def create_tree(self, infoset, best_action_tuples):
-        global TREE_TARGET_DEPTH
-        state = MctsState(infoset.player_position,
-                          infoset.last_two_moves, infoset.all_handcards)
-        root_node = Node(state)
-
-        # create a node for each action from the hand
-        for action_tuple in best_action_tuples:
-            child_node = self.build_child_node(action_tuple, state)
-            root_node.children[tuple(action_tuple[0])] = child_node
-
-        # self.fill_node(root_node, TREE_TARGET_DEPTH)
-        return root_node
+        return Node(new_state)
 
     def choose_best_action_from_children(self, tree, infoset):
         lowest_num_cards_left = float('inf')
@@ -166,6 +144,15 @@ class MctsAgent:
         result = list(best_action)
 
         return result
+
+    # def fill_node(self, root_node, depth):
+    #     pass
+    #     # if depth == 0:
+    #     #   return root_node
+    #     # BROKEN
+    #     # for action_child_pair in root_node.children:
+    #     #
+    #     #   self.fill_node(action_child_pair[1], depth - 1)
 
     # def traverse_round_tree(self, infoset):
     #   target_leaf_hand = None  # TODO
