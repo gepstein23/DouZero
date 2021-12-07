@@ -228,12 +228,58 @@ def get_best_following_moves(hand, combinations, last_move):
             this_rank = int(CARD_TYPE[0][move][0][1])
             if this_rank > last_rank:
                 moves.append(move)
+    
+    legal_bombs = []
+    if 'bomb' == the_type:
+        for move in combinations['bomb']:
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank:
+                legal_bombs.append(move)
+    elif 'rocket' != the_type:
+        legal_bombs = combinations['bomb']
 
-    moves = getFirstAndLastArr(
-        moves) + combinations['bomb'] + combinations['rocket']
+    # prior_moves = copy.copy(moves)
+    moves = getFirstAndLastArr(moves) + legal_bombs + combinations['rocket']
 
-    # convert to actions arrays and add pass as a valid move
-    return formatResultTuple(hand, moves) + [([], hand)]
+    # if env_arr2real_card_str([3, 4, 6, 6, 6, 7, 8, 9, 10, 11, 12, 13, 14]) == env_arr2real_card_str(hand):
+    #     print('hand', hand)
+    #     print('lm', last_move)
+    #     print('type', the_type)
+    #     print('combos', combinations)
+    #     print('prior_moves', prior_moves)
+    #     print('moves', moves)
+
+    if len(moves) > 0:
+        # convert to actions arrays and add pass as a valid move
+        return formatResultTuple(hand, moves) + [([], hand)]
+    
+    if the_type == SOLO:
+        legal_solos = []
+        for i, move in enumerate(env_arr2real_card_str(hand)):
+            this_rank = int(CARD_TYPE[0][move][0][1])
+            if this_rank > last_rank and move not in legal_solos:
+                legal_solos.append(move)
+
+        result = formatResultTuple(hand, getFirstAndLastArr(legal_solos)) + [([], hand)]
+        
+        return result
+    
+    if the_type == PAIR:
+        legal_pairs = []
+        for i, card in enumerate(hand):
+            # check if pair
+            if i < len(hand) - 1 and card == hand[i + 1]:
+                # create move
+                move = env_arr2real_card_str([card, card]) 
+                this_rank = int(CARD_TYPE[0][move][0][1])
+                if this_rank > last_rank and move not in legal_pairs:
+                    legal_pairs.append(move)
+        
+        return formatResultTuple(hand, getFirstAndLastArr(legal_pairs)) + [([], hand)]
+    
+    # pass this turn since there aren't any legal actions
+    return [([], hand)]
+
 
 
 # Pick pair chains which results in removing more cards from hand than by playing the solo straight

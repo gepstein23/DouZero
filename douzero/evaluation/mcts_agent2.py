@@ -21,7 +21,7 @@ import math
 class MCTS:
     "Monte Carlo tree searcher. First rollout the tree then choose a move."
 
-    def __init__(self, exploration_weight=.5, depth=2):
+    def __init__(self, exploration_weight=.5, depth=4):
         self.Q = defaultdict(int)  # total reward of each node
         self.N = defaultdict(int)  # total visit count for each node
         self.children = dict()  # children of each node
@@ -40,10 +40,11 @@ class MCTS:
             if self.N[n] == 0:
                 return float("-inf")  # avoid unseen moves
 
-            print((n.player_action, n.all_handcards[n.position]), self.Q[n] / self.N[n])
+            # print((n.player_action, n.all_handcards[n.position]), self.Q[n] / self.N[n])
             return self.Q[n] / self.N[n]  # average reward
 
-        print('------------\n')
+        # print('------------\n')
+        # print('Last Two Moves: ', node.last_two_moves)
         
         return max(self.children[node], key=score)
 
@@ -284,7 +285,7 @@ class MctsAgent:
     ######################################################################
     ########################## UTILITIES #################################
     ######################################################################
-    def __init__(self, position, depth=4, num_rollouts=100):
+    def __init__(self, position, depth=4, num_rollouts=1000):
         self.name = 'MCTS'
         self.position = position
         self.depth = depth
@@ -309,8 +310,16 @@ class MctsAgent:
 
         action = best_node.player_action
 
-        print('CHOSEN ACTION:', action)
+        #print('CHOSEN ACTION:', action)
         
+        if action not in infoset.legal_actions:
+            print('ILLEGAL ACTION:', action)
+            print('LAST TWO MOVES', infoset.last_two_moves)
+            print('LEGAL ACTIONS', infoset.legal_actions)
+            print('HAND', infoset.player_hand_cards)
+            action = random.choice(infoset.legal_actions)
+
+
 
         assert action in infoset.legal_actions
 
