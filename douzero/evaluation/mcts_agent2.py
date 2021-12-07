@@ -40,11 +40,11 @@ class MCTS:
             if self.N[n] == 0:
                 return float("-inf")  # avoid unseen moves
 
-            # print((n.player_action, n.all_handcards[n.position]), self.Q[n] / self.N[n])
+            print((n.player_action, n.all_handcards[n.position]), self.Q[n] / self.N[n])
             return self.Q[n] / self.N[n]  # average reward
 
-        # print('------------\n')
-        # print('Last Two Moves: ', node.last_two_moves)
+        print('------------\n')
+        print('Last Two Moves: ', node.last_two_moves)
         
         return max(self.children[node], key=score)
 
