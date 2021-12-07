@@ -21,7 +21,7 @@ def load_card_play_models(card_play_model_path_dict):
             players[position] = RandomAgent()
         elif card_play_model_path_dict[position] == 'mcts':
             from .mcts_agent import MctsAgent
-            players[position] = MctsAgent()
+            players[position] = MctsAgent(position)
         elif card_play_model_path_dict[position] == 'expectimax':
             from .expectimax_agent import ExpectimaxAgent
             players[position] = ExpectimaxAgent()

@@ -24,6 +24,7 @@ class RLCardAgent(object):
         try:
             # Hand cards
             hand_cards = infoset.player_hand_cards
+            # print('hand-cards', hand_cards)
             for i, c in enumerate(hand_cards):
                 hand_cards[i] = EnvCard2RealCard[c]
             hand_cards = ''.join(hand_cards)
@@ -139,13 +140,13 @@ class RLCardAgent(object):
         # 4. pick solo chain
         # Note: Updated pick chain to pick chains of pairs that are 3 long and trios that are 2 long.
         # This is what pick chain v2 accomplishes. weupdated this in thier implmentation because it is a bug.
-        hand_list = card_str2list(hand)
+        hand_list = card_str2count_list(hand)
         chains, hand_list = pick_chain_v2(hand_list, 1)
         comb['solo_chain'] = chains
         # 5. pick par_chain
         chains, hand_list = pick_chain_v2(hand_list, 2)
         comb['pair_chain'] = chains
-        hand = list2card_str(hand_list)
+        hand = count_list2card_str(hand_list)
         # 6. pick pair and solo
         index = 0
         while index < len(hand) - 1:
@@ -319,7 +320,7 @@ class RLCardAgentV2(RLCardAgent):
         comb['trio'] = only_trio
         comb['trio_chain'] = only_trio_chain
 
-        hand_list = card_str2list(hand)
+        hand_list = card_str2count_list(hand)
 
         # The following two combos are the change from V1.
         # 4. Pick Non Disruptive Pair Chains
@@ -331,7 +332,7 @@ class RLCardAgentV2(RLCardAgent):
         comb['solo_chain'] = chains
 
         # update hand again with new hand list
-        hand = list2card_str(hand_list)
+        hand = count_list2card_str(hand_list)
 
         # 6. pick pair and solo
         index = 0
@@ -390,14 +391,15 @@ def getActionArr(ac):
     return result
 
 
-def card_str2list(hand):
+# count list is a list of counts where indexes correspond to Env card number ie list[0] is count of 3
+def card_str2count_list(hand):
     hand_list = [0 for _ in range(15)]
     for card in hand:
         hand_list[INDEX[card]] += 1
     return hand_list
 
-
-def list2card_str(hand_list):
+# count list is a list of counts where indexes correspond to Env card number ie list[0] is count of 3
+def count_list2card_str(hand_list):
     card_str = ''
     cards = [card for card in INDEX]
     for index, count in enumerate(hand_list):
