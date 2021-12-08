@@ -110,7 +110,51 @@ landlord : Farmers - 0.6328 : 0.3672
 ADP results:
 landlord : Farmers - 0.7398 : -0.7398
 
+## MCTS Agent
+##### Control: RL Card Playing Against Itself 
+WP results:
+landlord : Farmers - 0.42333333333333334 : 0.5766666666666667
+ADP results:
+landlord : Farmers - -0.35333333333333333 : 0.35333333333333333
 
-## Next steps
-Try adding kickers to triples.
-Try prioritizing low sets of trios
+WP results:
+landlord : Farmers - 0.42333333333333334 : 0.5766666666666667
+ADP results:
+landlord : Farmers - -0.4266666666666667 : 0.4266666666666667
+
+WP results:
+landlord : Farmers - 0.4033333333333333 : 0.5966666666666667
+ADP results:
+landlord : Farmers - -0.48 : 0.48
+##### RL Card V2 playing 300 games against rl card
+WP results:
+landlord : Farmers - 0.61 : 0.39
+ADP results:
+landlord : Farmers - 0.6133333333333333 : -0.6133333333333333
+
+WP results:
+landlord : Farmers - 0.5866666666666667 : 0.41333333333333333
+ADP results:
+landlord : Farmers - 0.43333333333333335 : -0.43333333333333335
+
+WP results:
+landlord : Farmers - 0.6 : 0.4
+ADP results:
+landlord : Farmers - 0.3933333333333333 : -0.3933333333333333
+
+
+##### MCTS Agent playing 300 games against rl card
+WP results:
+landlord : Farmers - 0.6333333333333333 : 0.36666666666666664
+ADP results:
+landlord : Farmers - 0.7266666666666667 : -0.7266666666666667
+
+WP results:
+landlord : Farmers - 0.6333333333333333 : 0.36666666666666664
+ADP results:
+landlord : Farmers - 0.7533333333333333 : -0.7533333333333333
+
+WP results:
+landlord : Farmers - 0.65 : 0.35
+ADP results:
+landlord : Farmers - 0.8666666666666667 : -0.8666666666666667
