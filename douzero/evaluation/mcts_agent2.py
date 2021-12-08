@@ -92,7 +92,7 @@ class MCTS:
         for node in reversed(path):
             self.N[node] += 1
             self.Q[node] += reward
-            reward = reward  # 1 for me is 0 for my enemy, and vice versa
+            reward = reward 
 
     def _uct_select(self, node):
         "Select a child of node, balancing exploration & exploitation"
@@ -149,14 +149,15 @@ class Node(ABC):
         return node1 == node2
 
 
+# TODO UPDATE STATE HERE FOR V2
+# TODO POTENTIALLY ADD UNPLAYED CARD LIST AND PLAYER_HAND CARDS
 _DD = namedtuple(
     "DouDizhuNode", "position player_action last_two_moves all_handcards is_root")
 
 # Inheriting from a namedtuple is convenient because it makes the class
 # immutable and predefines __init__, __repr__, __hash__, __eq__, and others
-
-
 class DouDizhuNode(_DD, Node):
+    # TODO UPDATE HASH HERE FOR V2
     def __hash__(self):
         action_str = util.env_arr2real_card_str(self.player_action)
         hand_str = util.env_arr2real_card_str(
@@ -165,7 +166,7 @@ class DouDizhuNode(_DD, Node):
 
     def is_terminal(self):
         if self.is_root:
-            return
+            return False
 
         for position in self.all_handcards:
             hand = self.all_handcards[position]
@@ -223,13 +224,15 @@ class DouDizhuNode(_DD, Node):
         else:
             return landlord_count - min_farmer_count
 
+    # TODO THIS IS BASICALLY OUR HEURISTIC FOR ADDING NODES
+    # TODO THIS IS WHERE TO CHANGE HOW OPPONENT HAND IS SELECTED
     def make_action(self, action_tuple):
         all_handcards = dict()
         position = self.position
         # Update the players hand in all_handcards and hand
         last_move, player_hand = action_tuple
         player_action = last_move
-        all_handcards[position] = player_hand
+        all_handcards[position] = player_hand # update the player hand based on last action
 
         # update the last two moves now that we have taken another action
         updated_last_two_moves = [last_move, self.last_two_moves[0]]
@@ -285,7 +288,7 @@ class MctsAgent:
     ######################################################################
     ########################## UTILITIES #################################
     ######################################################################
-    def __init__(self, position, depth=4, num_rollouts=1000):
+    def __init__(self, position, depth=5, num_rollouts=1000):
         self.name = 'MCTS'
         self.position = position
         self.depth = depth

@@ -35,7 +35,6 @@ def get_best_actions(hand_cards, last_two_moves):
 # TODO generate all chains, trios recursively and the solos / pairs that arise from that because
 # TODO sometimes these may result in better plays to play a "worse" combos
 
-
 def get_combinations(hand):
     '''Get optimal combinations of cards in hand
     '''
@@ -260,7 +259,7 @@ def get_best_following_moves(hand, combinations, last_move):
             if this_rank > last_rank and move not in legal_solos:
                 legal_solos.append(move)
 
-        result = formatResultTuple(hand, getFirstAndLastArr(legal_solos)) + [([], hand)]
+        result = formatResultTuple(hand, legal_solos) + [([], hand)]
         
         return result
     
@@ -275,7 +274,7 @@ def get_best_following_moves(hand, combinations, last_move):
                 if this_rank > last_rank and move not in legal_pairs:
                     legal_pairs.append(move)
         
-        return formatResultTuple(hand, getFirstAndLastArr(legal_pairs)) + [([], hand)]
+        return formatResultTuple(hand, legal_pairs) + [([], hand)]
     
     # pass this turn since there aren't any legal actions
     return [([], hand)]
