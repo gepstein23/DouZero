@@ -3,7 +3,7 @@ import random
 import json
 import copy
 
-from douzero.dmc.utils import act
+#from douzero.dmc.utils import act
 from . import util
 from ..env.game import InfoSet
 

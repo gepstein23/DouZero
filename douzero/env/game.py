@@ -74,6 +74,7 @@ class GameEnv(object):
             self.update_num_wins_scores()
 
             self.game_over = True
+            print("Game Over")
 
     def compute_player_utility(self):
 
