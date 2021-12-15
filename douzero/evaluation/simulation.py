@@ -2,7 +2,7 @@ import time
 import multiprocessing as mp
 import pickle
 
-from douzero.env.game import GameEnv
+from ..env.game import GameEnv
 
 
 def load_card_play_models(card_play_model_path_dict):
@@ -44,7 +44,7 @@ def mp_simulate(card_play_data_list, card_play_model_path_dict, q):
         while not env.game_over:
             env.step()
         env.reset()
-
+    print("Simulation Thread Complete")
     q.put((env.num_wins['landlord'],
            env.num_wins['farmer'],
            env.num_scores['landlord'],
